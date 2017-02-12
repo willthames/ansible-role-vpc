@@ -1,0 +1,41 @@
+- name: create VPC
+  ec2_vpc_net:
+    profile: "{{ aws_profile|default(omit) }}"
+    region: "{{ aws_region }}"
+    cidr_block: "{{ vpc_cidr }}"
+    name: "{{ vpc_name }}"
+    tags: "{{ vpc_tags }}"
+  register: {{ vpc_create_vpc }}"
+    
+- name: create subnets
+  ec2_vpc_subnet:
+    profile: "{{ aws_profile|default(omit) }}"
+    region: "{{ aws_region }}"
+    az: "{{ item.az }}"
+    cidr_block: "{{ item.cidr }}"
+    name: "{{ item.name }}"
+    tags: "{{ item.tags }}"
+    vpc_id: "{{ vpc_create_vpc.vpc.vpc_id }}"
+  with_items: "{{ vpc_subnets }}"
+    
+- name: create security groups
+  ec2_group:
+    profile: "{{ aws_profile|default(omit) }}"
+    region: "{{ aws_region }}"
+    name: "{{ item.name }}"
+    rules: "{{ item.rules }}"
+    rules_egress: "{{ item.rules_egress|default(omit) }}" 
+    vpc_id: "{{ vpc_create_vpc.vpc.vpc_id }}"
+  with_items: "{{ vpc_security_groups }}"
+
+- name: create network ACLs
+  ec2_vpc_nacls:
+    profile: "{{ aws_profile|default(omit) }}"
+    region: "{{ aws_region }}"
+    name: "{{ item.name }}"
+    tags: "{{ item.tags|default(omit) }}"
+    egress: "{{ item.egress|default(omit) }}" 
+    ingress: "{{ item.ingress|default(omit) }}" 
+    subnets: "{{ item.subnets|default(omit) }}"
+    vpc_id: "{{ vpc_create_vpc.vpc.vpc_id }}"
+  with_items: "{{ vpc_network_acls }}"
